@@ -2,6 +2,7 @@ Django==1.9
 Twisted==15.5.0
 autobahn==0.11.0
 channels==0.8
+redis==2.10.5
 six==1.10.0
 txaio==2.2.0
 wsgiref==0.1.2

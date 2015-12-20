@@ -126,7 +126,8 @@ STATIC_ROOT = os.path.join(BASE_DIR, '../static')
 # In settings.py
 CHANNEL_BACKENDS = {
     "default": {
-        "BACKEND": "channels.backends.database.DatabaseChannelBackend",
+        #"BACKEND": "channels.backends.database.DatabaseChannelBackend",
+        "BACKEND": "channels.backends.redis_py.RedisChannelBackend",
         "ROUTING": "sensors.routing.channel_routing",
     },
 }
