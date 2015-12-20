@@ -1,22 +1,33 @@
 # In consumers.py
 from channels import Group
+from channels.decorators import channel_session
+
+import json
 
 # Connected to websocket.connect and websocjet.keepalive
+@channel_session
 def ws_add(message):
-    print "1 ... add", message.reply_channel
-    Group("chat").add(message.reply_channel)
-
-
-# Connected to websocket.disconnect
-def ws_disconnect(message):
-    Group("chat").discard(message.reply_channel)
+    query_params =  message.content['get']
+    listen = query_params.get('listen')
+    message.channel_session['listen'] = listen
+    for i in listen:
+        Group("listeners-"+str(i)).add(message.reply_channel)
 
 
 # Connected to websocket.receive
+@channel_session
 def ws_message(message):
-    Group("chat").send(message.content)
-
-
+    #print message.content
+    try:
+        content = json.loads(message.content['content'])
+        if 'uid' in content:
+            Group("listeners-"+str(content['uid'])).send(message.content)       
+    except:
+        pass
+    
 # Connected to websocket.disconnect
+@channel_session
 def ws_disconnect(message):
-    Group("chat").discard(message.reply_channel)
+    listen = message.channel_session.get('listen', [])
+    for i in message.channel_session['listen']:
+        Group("listeners-"+i).discard(message.reply_channel)
