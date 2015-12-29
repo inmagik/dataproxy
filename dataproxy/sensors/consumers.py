@@ -18,6 +18,9 @@ def ws_add(message):
 @channel_session
 def ws_message(message):
     #print message.content
+    listen = message.channel_session.get('listen', [])
+    for i in listen:
+        Group("listeners-"+str(i)).add(message.reply_channel)
     try:
         content = json.loads(message.content['content'])
         if 'uid' in content:
