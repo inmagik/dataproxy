@@ -1,0 +1,114 @@
+---
+- hosts: all
+  sudo: true
+  vars: 
+    SERVER_APP_NAME : "dataproxy"
+    GIT_REPO : "https://bianchimro:chocosgit@github.com/inmagik/dataproxy.git"
+    SERVER_DJANGO_PROJECT_NAME: "dataproxy"   
+    SERVER_APP_VENV_PATH : "/srv/{{SERVER_APP_NAME}}/env"
+    SERVER_APP_BASE_FOLDER : "/srv/{{SERVER_APP_NAME}}/{{SERVER_DJANGO_PROJECT_NAME}}"
+    SERVER_APP_MEDIA_FOLDER: "/srv/{{SERVER_APP_NAME}}/media"
+    SERVER_APP_STATIC_FOLDER: "/srv/{{SERVER_APP_NAME}}/static"
+    SERVER_APP_SOCKET_PATH : "/srv/{{SERVER_APP_NAME}}/nginx/socket.sock"
+    SERVER_WS_SOCKET_PATH : "/srv/{{SERVER_APP_NAME}}/nginx/socket_ws.sock"
+    SERVER_APP_DOMAIN : "dataproxy.inmagik.com"
+    SERVER_APP_WSGI_PARAMS_PATH : "/srv/{{SERVER_APP_NAME}}/nginx/uwsgi_params"
+    SERVER_APP_UWSGI_INI_PATH : "/srv/{{SERVER_APP_NAME}}/nginx/uwsgi.ini"
+    SERVER_APP_UWSGI_WS_INI_PATH : "/srv/{{SERVER_APP_NAME}}/nginx/uwsgi_ws.ini"
+    SERVER_APP_SYSTEM_USER : "www-data" 
+    CLIENT_GIT_REPO : "https://bianchimro:chocosbit@bitbucket.org/bianchimro/no-risk.git"
+    CLIENT_APP_NAME : "no-risk"
+    CLIENT_APP_BASE_PATH : "/srv/{{CLIENT_APP_NAME}}"
+    CLIENT_APP_NGINX_PATH : "/srv/{{CLIENT_APP_NAME}}/NoRisk/www"
+
+
+  tasks:
+
+    - include: base-git-virtualenv.yml
+
+    - name: install nginx
+      apt: name=nginx state=present 
+
+    - name: install uwsgi via pip 
+      pip: name=uwsgi
+      environment:
+        UWSGI_PROFILE_OVERRIDE: "ssl=true;"
+
+
+    - name: install supervisor
+      apt: name=supervisor state=present     
+
+    #- include: python-pil.yml
+
+    - include: redis.yml
+
+    - name: clone repo
+      git: repo={{GIT_REPO}} dest=/srv/{{SERVER_APP_NAME}} force=true
+
+    - name: nginx folder
+      file: path=/srv/{{SERVER_APP_NAME}}/nginx owner={{SERVER_APP_SYSTEM_USER}} state=directory mode=0777 recurse=yes
+
+    - name: setup virtualenv 
+      pip: requirements=/srv/{{SERVER_APP_NAME}}/requirements.txt virtualenv={{SERVER_APP_VENV_PATH}}
+
+    - name: copy uwsgi_params
+      template: src=uwsgi_params dest={{SERVER_APP_WSGI_PARAMS_PATH}}
+
+    - name: template nginx
+      template: src=nginx.conf dest=/etc/nginx/sites-enabled/{{SERVER_APP_NAME}}.conf
+
+    - name: remove old nginx
+      file: path=/etc/nginx/sites-enabled/default state=absent
+
+    - name: template uwsgi.ini
+      template: src=uwsgi.ini dest={{SERVER_APP_UWSGI_INI_PATH}}
+
+    - name: template uwsgi_ws.ini
+      template: src=uwsgi_ws.ini dest={{SERVER_APP_UWSGI_WS_INI_PATH}}
+
+    - name: template supervisor
+      template: src=supervisor.conf dest=/etc/supervisor/conf.d/{{SERVER_APP_NAME}}.conf
+
+    - name: supervisor start
+      service: name=supervisor state=restarted
+
+    - name: supervisor reload
+      command: supervisorctl reload
+
+    # Run syncdb on the application
+    - name: migrate django app
+      django_manage: >
+        command=migrate
+        app_path={{ SERVER_APP_BASE_FOLDER }}
+        virtualenv={{ SERVER_APP_VENV_PATH }}
+
+    - name: django db writable
+      file: path={{ SERVER_APP_BASE_FOLDER }} owner={{SERVER_APP_SYSTEM_USER}} mode=0755 recurse=true
+
+    - name: collectstatic
+      django_manage: >
+        command=collectstatic
+        app_path={{ SERVER_APP_BASE_FOLDER }}
+        virtualenv={{ SERVER_APP_VENV_PATH }}
+
+    - name: supervisor start  
+      supervisorctl: name={{ SERVER_DJANGO_PROJECT_NAME }} state=started
+
+    - name: supervisor start  ws
+      supervisorctl: name={{ SERVER_DJANGO_PROJECT_NAME }}_wsserver state=started
+
+    - name: supervisor start  worker
+      supervisorctl: name={{ SERVER_DJANGO_PROJECT_NAME }}_worker state=started
+
+    #- name: supervisor start  scheduler
+    #  supervisorctl: name={{ SERVER_DJANGO_PROJECT_NAME }}_scheduler state=started
+
+    - name: clone client repo
+      git: repo={{CLIENT_GIT_REPO}} dest={{CLIENT_APP_BASE_PATH}} force=true
+
+    - name: restart nginx
+      service: name=nginx state=restarted
+
+
+
+

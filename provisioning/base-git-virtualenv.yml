@@ -1,0 +1,16 @@
+---
+- name: updating repos
+  apt: update_cache=yes
+
+- name: install git virtualenv and python things
+  apt: pkg={{item}} state=present
+  with_items:
+    - git
+    - libpcre3
+    - libpcre3-dev
+    - python-virtualenv
+    - python-pip
+    - python-dev
+    - build-essential
+    - libssl-dev
+

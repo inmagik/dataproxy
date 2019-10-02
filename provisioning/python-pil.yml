@@ -1,0 +1,9 @@
+---
+- name: Install system packages for PIL
+  apt: pkg={{item}} state=present
+  with_items:
+    - libjpeg8
+    - libjpeg62-dev
+    - libfreetype6 
+    - libfreetype6-dev 
+    - zlib1g-dev

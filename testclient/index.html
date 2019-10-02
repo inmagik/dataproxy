@@ -1,0 +1,40 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        
+    </head>
+    <body>
+        <div id="a">
+            
+        </div>
+        <script>
+            //socket = new WebSocket("ws://188.166.104.179:9000");
+            
+            var uid = "123";//Math.random()*10000 + new Date().getTime(); 
+            //socket = new WebSocket("ws://localhost:9000?listen="+uid);
+            socket = new WebSocket("ws://188.166.104.179:9000?listen=1234");
+
+            socket.onmessage = function(e) {
+                //console.log(e)
+                var d = JSON.parse(e.data);
+                console.log(d)
+                if(!d.result) return;
+                //console.log(1, d)
+                console.log(d.result.x, d.result.y, d.result.x)
+            }
+            socket.onopen = function() {
+                console.log("open")
+                say(100);
+            }
+
+            function say(msg){
+                var amsg = { msg:msg, uid:uid};
+                socket.send(JSON.stringify(amsg));
+            }
+
+            
+
+        </script>
+        
+    </body>
+</html>
