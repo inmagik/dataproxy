@@ -1,4 +1,4 @@
-Django==1.9
+Django==1.11.28
 Twisted==15.5.0
 autobahn==0.11.0
 channels==0.8
